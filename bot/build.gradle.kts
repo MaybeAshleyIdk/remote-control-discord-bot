@@ -26,7 +26,12 @@ application {
 dependencies {
 	implementation(libs.kotlinx.coroutinesCore)
 	implementation(libs.kotlinx.immutableCollections)
-	implementation(libs.jda)
+	implementation(libs.jda) {
+		exclude(module = "opus-java")
+	}
+
+	implementation(projects.logging.implStderr)
+	implementation(projects.logging.slf4j)
 }
 
 // These are not needed since shadow is used.

@@ -12,7 +12,7 @@ internal value class ArgumentVector(private val list: ImmutableList<String>) {
 	}
 
 	fun toCommandLine(): String {
-		return this.list.joinToString(separator = " ")
+		return this.list.joinToString(separator = " ", transform = String::quotedIfNecessary)
 	}
 
 	fun toArray(): Array<String> {
@@ -22,4 +22,25 @@ internal value class ArgumentVector(private val list: ImmutableList<String>) {
 	override fun toString(): String {
 		return this.list.toString()
 	}
+}
+
+private fun String.quotedIfNecessary(): String {
+	if (this.isEmpty()) {
+		return "\"\""
+	}
+
+	if (this.all(Char::doesNotRequireQuoting)) {
+		return this
+	}
+
+	return this
+		.replace("\\", "\\\\")
+		.replace("\"", "\\\"")
+}
+
+private fun Char.doesNotRequireQuoting(): Boolean {
+	return (this in 'a'..'z') ||
+		(this in 'A'..'Z') ||
+		(this in '0'..'9') ||
+		(this in '+'..'/') // also includes the comma (','), hyphen-minus ('-') and full stop ('.')
 }

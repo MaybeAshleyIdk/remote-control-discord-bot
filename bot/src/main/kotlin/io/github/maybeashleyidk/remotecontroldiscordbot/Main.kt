@@ -16,6 +16,7 @@ import io.github.maybeashleyidk.remotecontroldiscordbot.env.getInstanceConfigDir
 import io.github.maybeashleyidk.remotecontroldiscordbot.localcommands.LocalCommandsConfig
 import io.github.maybeashleyidk.remotecontroldiscordbot.localcommands.LocalCommandsConfigParsingResult
 import io.github.maybeashleyidk.remotecontroldiscordbot.localcommands.parseToLocalCommandsConfig
+import io.github.maybeashleyidk.remotecontroldiscordbot.logging.stderr.StderrLogger
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import kotlin.io.path.div
@@ -99,7 +100,7 @@ private fun main(processInformation: ProcessInformation, instanceName: InstanceN
 
 	val token: BotToken = getTokenOrExit(processInformation, instanceConfigDirectoryPath)
 
-	runBot(token, localCommandsConfig)
+	runBot(token, localCommandsConfig, logger = StderrLogger)
 }
 
 private fun getLocalCommandsConfigOrExit(

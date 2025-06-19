@@ -3,7 +3,10 @@ package io.github.maybeashleyidk.remotecontroldiscordbot
 import io.github.maybeashleyidk.remotecontroldiscordbot.UiStringResolver.WithLocale.Companion.resolve
 import io.github.maybeashleyidk.remotecontroldiscordbot.UiStringResolver.WithLocale.Companion.withLocale
 import io.github.maybeashleyidk.remotecontroldiscordbot.localcommands.LocalCommand
-import io.github.maybeashleyidk.remotecontroldiscordbot.utils.ArgumentVector
+import io.github.maybeashleyidk.remotecontroldiscordbot.logging.Logger
+import io.github.maybeashleyidk.remotecontroldiscordbot.logging.Logger.Companion.logInfo
+import io.github.maybeashleyidk.remotecontroldiscordbot.logging.Logger.Companion.logWarning
+import io.github.maybeashleyidk.remotecontroldiscordbot.logging.withScope
 import io.github.maybeashleyidk.remotecontroldiscordbot.utils.NestedSupervisorJob
 import io.github.maybeashleyidk.remotecontroldiscordbot.utils.await
 import io.github.maybeashleyidk.remotecontroldiscordbot.utils.exec
@@ -24,11 +27,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withContext
+import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.events.GenericEvent
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.events.session.ShutdownEvent
 import net.dv8tion.jda.api.hooks.EventListener
 import net.dv8tion.jda.api.interactions.InteractionHook
+import net.dv8tion.jda.api.requests.CloseCode
 import net.dv8tion.jda.api.utils.FileUpload
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder
 import net.dv8tion.jda.api.utils.messages.MessageCreateData
@@ -47,12 +52,15 @@ internal class MainEventListener(
 	parentCoroutineScope: CoroutineScope,
 	private val deferredConfig: Deferred<Config>,
 	private val uiStringResolver: UiStringResolver,
+	logger: Logger,
 ) : EventListener, Closeable {
 
 	data class Config(
 		val authorizedUserIds: ImmutableSet<Long>,
 		val commandsMap: ImmutableMap<Long, LocalCommand>,
 	)
+
+	private val logger: Logger = logger.withScope("MainEventListener")
 
 	private var closing: AtomicBoolean = AtomicBoolean(false)
 
@@ -72,13 +80,35 @@ internal class MainEventListener(
 		Dispatchers.Default +
 		NestedSupervisorJob()
 
+	init {
+		deferredConfig.invokeOnCompletion { cause: Throwable? ->
+			if (cause != null) {
+				return@invokeOnCompletion
+			}
+
+			this@MainEventListener.logger.logInfo("Ready to receive slash command interaction events")
+		}
+	}
+
 	override fun onEvent(event: GenericEvent) {
 		if (this.closing.get()) {
 			return
 		}
 
 		when (event) {
-			is ShutdownEvent -> this.close()
+			is ShutdownEvent -> {
+				val codeStr: String = event.code
+					.let { code: Int ->
+						CloseCode.from(code)
+							?.let { closeCode: CloseCode ->
+								"${closeCode.name} (code: ${closeCode.code}): \"${closeCode.meaning}\""
+							}
+							?: "code=$code"
+					}
+				this.logger.logInfo("Received shutdown event: $codeStr")
+
+				this.close()
+			}
 
 			is SlashCommandInteractionEvent -> {
 				this.eventHandlingCoroutineScope.launch {
@@ -93,6 +123,12 @@ internal class MainEventListener(
 	}
 
 	private suspend fun handleSlashCommandInteraction(event: SlashCommandInteractionEvent) {
+		this.logger.logInfo(
+			"Received slash command interaction event:\n" +
+				"/${event.fullCommandName} (${event.commandId})\n" +
+				"By user ${event.user.toLogString()}",
+		)
+
 		val config: Config = this.deferredConfig.await()
 
 		val uiStringResolver: UiStringResolver.WithLocale = this.uiStringResolver.withLocale(event.userLocale)
@@ -102,11 +138,20 @@ internal class MainEventListener(
 				.setEphemeral(true)
 				.await()
 
+			this.logger.logInfo("The unauthorized user ${event.user.toLogString()} tried to use a slash command")
+
 			return
 		}
 
-		val localCommand: LocalCommand = config.commandsMap[event.interaction.commandIdLong]
-			?: return
+		val localCommand: LocalCommand? = config.commandsMap[event.interaction.commandIdLong]
+
+		if (localCommand == null) {
+			val message: String = "The slash command with the ID ${event.commandId} (/${event.fullCommandName}) " +
+				"is not known. Bailing out"
+			this.logger.logWarning(message)
+
+			return
+		}
 
 		val deferredInteractionHook: Deferred<InteractionHook> = event.deferReply(/* ephemeral = */ true)
 			.submit()
@@ -120,7 +165,7 @@ internal class MainEventListener(
 			) { stderrFile: FileChannel? ->
 				val messageCreateData: MessageCreateData =
 					this.executeCommand(
-						argv = localCommand.argv,
+						localCommand = localCommand,
 						stdoutFile = stdoutFile,
 						stderrFile = stderrFile,
 						uiStringResolver = uiStringResolver,
@@ -132,19 +177,28 @@ internal class MainEventListener(
 	}
 
 	private suspend fun executeCommand(
-		argv: ArgumentVector,
+		localCommand: LocalCommand,
 		stdoutFile: FileChannel,
 		stderrFile: FileChannel?,
 		uiStringResolver: UiStringResolver.WithLocale,
 	): MessageCreateData {
+		this.logger.logInfo("Executing the local command ${localCommand.toLogString()}")
+
 		val exitStatusCode: Int = supervisorScope {
 			withContext(commandExecutionCoroutineContext) {
 				exec(
-					argv = argv,
+					argv = localCommand.argv,
 					stdout = Channels.newOutputStream(stdoutFile),
 					stderr = stderrFile?.let(Channels::newOutputStream),
 				)
 			}
+		}
+
+		if (exitStatusCode == 0) {
+			this.logger.logInfo("Successfully executed the local command ${localCommand.toLogString()}")
+		} else {
+			val message = "The local command ${localCommand.toLogString()} exited with the status code $exitStatusCode"
+			this.logger.logWarning(message)
 		}
 
 		val message: String =
@@ -175,6 +229,7 @@ internal class MainEventListener(
 			return
 		}
 
+		this.logger.logInfo("Closing the event listener")
 		this.commandExecutionExecutorService.shutDownAndAwaitTermination()
 		this.eventHandlingCoroutineScope.cancel(message = "The event listener was closed")
 	}
@@ -219,4 +274,12 @@ private fun FileChannel.toFileUpload(basename: String): FileUpload? {
 	val suffix: String = if (array.isUtf8SafePrintable()) ".txt" else ".bin"
 
 	return FileUpload.fromData(array, "$basename$suffix")
+}
+
+private fun User.toLogString(): String {
+	return "@${this.name} (${this.id})"
+}
+
+private fun LocalCommand.toLogString(): String {
+	return "\"${this.name}\" (${this.argv.toCommandLine()})"
 }

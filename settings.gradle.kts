@@ -13,4 +13,11 @@ dependencyResolutionManagement {
 	}
 }
 
-include(":bot")
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+
+include(
+	":logging:api",
+	":logging:impl-stderr",
+	":logging:slf4j",
+	":bot",
+)
