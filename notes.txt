@@ -1,0 +1,18 @@
+check for already running instances:
+	on start, check file ~~$XDG_CONFIG_HOME/remote-control-discord-bot/instances/<name>/pid.lock~~ NOT config dir,
+	need runtime dir for that
+
+	if exists, read out the previously saved pid from it
+	check if that process still exists
+	if not, continue
+	if yes, abort with error saying "instance still running"
+
+	if not aborted, save own pid into the file
+
+	java doesn't have standard way of checking processes, gotta do it scuffed by checking OS and then executing
+	`ps -p <pid>` (POSIX compliant)
+	if on windows, then fuck you
+
+
+console for graceful shutdown:
+	remote-control-discord-bot instance_name=<name> console shutdown
