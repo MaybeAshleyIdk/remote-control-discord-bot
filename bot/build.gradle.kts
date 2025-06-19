@@ -16,7 +16,7 @@ plugins {
 }
 
 group = "io.github.maybeashleyidk"
-version = "0.1.0-indev01"
+version = "0.1.0-indev02"
 
 application {
 	applicationName = "remote-control-discord-bot"
