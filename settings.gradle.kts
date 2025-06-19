@@ -13,4 +13,7 @@ dependencyResolutionManagement {
 	}
 }
 
-include(":bot")
+include(
+	":logging:api",
+	":bot",
+)
