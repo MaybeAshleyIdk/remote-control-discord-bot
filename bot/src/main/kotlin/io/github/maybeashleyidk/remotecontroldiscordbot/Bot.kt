@@ -2,6 +2,8 @@ package io.github.maybeashleyidk.remotecontroldiscordbot
 
 import io.github.maybeashleyidk.remotecontroldiscordbot.localcommands.LocalCommand
 import io.github.maybeashleyidk.remotecontroldiscordbot.localcommands.LocalCommandsConfig
+import io.github.maybeashleyidk.remotecontroldiscordbot.logging.Logger
+import io.github.maybeashleyidk.remotecontroldiscordbot.logging.Logger.Companion.logInfo
 import io.github.maybeashleyidk.remotecontroldiscordbot.utils.await
 import io.github.maybeashleyidk.remotecontroldiscordbot.utils.performGracefulShutdown
 import kotlinx.collections.immutable.ImmutableMap
@@ -21,13 +23,13 @@ import net.dv8tion.jda.api.interactions.commands.build.Commands
 import net.dv8tion.jda.api.interactions.commands.build.SlashCommandData
 import net.dv8tion.jda.api.requests.RestAction
 
-internal fun runBot(token: BotToken, localCommandsConfig: LocalCommandsConfig) {
+internal fun runBot(token: BotToken, localCommandsConfig: LocalCommandsConfig, logger: Logger) {
 	runBlocking {
-		runBotSuspending(token, localCommandsConfig)
+		runBotSuspending(token, localCommandsConfig, logger)
 	}
 }
 
-private suspend fun runBotSuspending(token: BotToken, localCommandsConfig: LocalCommandsConfig) {
+private suspend fun runBotSuspending(token: BotToken, localCommandsConfig: LocalCommandsConfig, logger: Logger) {
 	coroutineScope {
 		val localCommands: List<LocalCommand> = localCommandsConfig.getCommandsAsList()
 
@@ -40,6 +42,7 @@ private suspend fun runBotSuspending(token: BotToken, localCommandsConfig: Local
 			parentCoroutineScope = this@coroutineScope,
 			deferredConfig = deferredMainEventListenerConfig,
 			uiStringResolver = UiStringResolver.English,
+			logger = logger,
 		).use { mainEventListener: EventListener ->
 			val jda: Jda = JdaBuilder.createDefault(token.toString())
 				.addEventListeners(mainEventListener)
@@ -47,16 +50,20 @@ private suspend fun runBotSuspending(token: BotToken, localCommandsConfig: Local
 				.build()
 
 			Runtime.getRuntime()
-				.addShutdownHook(Thread(jda::performGracefulShutdown))
+				.addShutdownHook(Thread { jda.performGracefulShutdown(logger) })
 
 			jda.awaitReady()
 
 			// TODO: Cache the slash command IDs instead of re-creating them every time.
+			logger.logInfo("Deleting all existing slash commands...")
 			jda.deleteAllCommands()
+			logger.logInfo("Successfully deleted all existing slash commands")
 
 			val commandsMap: ImmutableMap<Long, LocalCommand> = jda.updateCommands()
 				.addCommands(slashCommandDataList)
+				.also { logger.logInfo("Creating slash commands...") }
 				.await()
+				.also { logger.logInfo("Successfully created slash commands") }
 				.withIndex()
 				.associate { (index: Int, command: Command) ->
 					command.idLong to localCommands[index]
