@@ -120,12 +120,12 @@ private suspend fun Jda.editAndDeleteSlashCommands(
 	logger: Logger,
 ): Map<SlashCommandId, LocalCommand> {
 	val actions: List<suspend () -> Pair<SlashCommandId, LocalCommand>?> = existingSlashCommands
-		.mapNotNull { existingSlashCommand: Command ->
+		.map { existingSlashCommand: Command ->
 			val existingSlashCommandName = SlashCommandName(existingSlashCommand.name)
 			val incomingCommand: Pair<SlashCommandData, LocalCommand>? = incomingCommands[existingSlashCommandName]
 
 			if (incomingCommand == null) {
-				return@mapNotNull suspend {
+				return@map suspend {
 					this.deleteCommandById(existingSlashCommand.idLong).await()
 
 					logger.logInfo("Deleted the slash command ${existingSlashCommand.toLogString()}")
@@ -137,7 +137,7 @@ private suspend fun Jda.editAndDeleteSlashCommands(
 			val (incomingSlashCommandData: SlashCommandData, incomingLocalCommand: LocalCommand) = incomingCommand
 
 			if (existingSlashCommand.isDataEqualTo(incomingSlashCommandData)) {
-				return@mapNotNull null
+				return@map { SlashCommandId(existingSlashCommand.idLong) to incomingLocalCommand }
 			}
 
 			suspend {
