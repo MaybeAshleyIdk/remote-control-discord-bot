@@ -13,7 +13,10 @@ dependencyResolutionManagement {
 	}
 }
 
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+
 include(
 	":logging:api",
+	":logging:impl-stderr",
 	":bot",
 )
