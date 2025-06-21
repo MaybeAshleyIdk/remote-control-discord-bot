@@ -31,6 +31,7 @@ dependencies {
 	}
 
 	implementation(projects.localCommands)
+	implementation(projects.bot)
 	implementation(projects.logging.implStderr)
 	implementation(projects.logging.slf4j)
 }

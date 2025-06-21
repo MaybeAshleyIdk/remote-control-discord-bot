@@ -1,10 +1,13 @@
 package io.github.maybeashleyidk.remotecontroldiscordbot
 
+import io.github.maybeashleyidk.remotecontroldiscordbot.internal.MainEventListener
+import io.github.maybeashleyidk.remotecontroldiscordbot.internal.UiStringResolver
+import io.github.maybeashleyidk.remotecontroldiscordbot.internal.syncSlashCommandsWithLocalCommands
+import io.github.maybeashleyidk.remotecontroldiscordbot.internal.utils.performGracefulShutdown
 import io.github.maybeashleyidk.remotecontroldiscordbot.localcommands.LocalCommand
 import io.github.maybeashleyidk.remotecontroldiscordbot.localcommands.LocalCommandsConfig
 import io.github.maybeashleyidk.remotecontroldiscordbot.logging.Logger
 import io.github.maybeashleyidk.remotecontroldiscordbot.logging.Logger.Companion.logInfo
-import io.github.maybeashleyidk.remotecontroldiscordbot.utils.performGracefulShutdown
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.coroutineScope
@@ -14,7 +17,7 @@ import net.dv8tion.jda.api.JDABuilder as JdaBuilder
 import net.dv8tion.jda.api.OnlineStatus
 import net.dv8tion.jda.api.hooks.EventListener
 
-internal fun runBot(token: BotToken, localCommandsConfig: LocalCommandsConfig, logger: Logger) {
+public fun runBot(token: BotToken, localCommandsConfig: LocalCommandsConfig, logger: Logger) {
 	runBlocking {
 		runBotSuspending(token, localCommandsConfig, logger)
 	}

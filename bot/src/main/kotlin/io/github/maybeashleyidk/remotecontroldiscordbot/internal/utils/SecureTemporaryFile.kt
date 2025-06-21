@@ -1,4 +1,4 @@
-package io.github.maybeashleyidk.remotecontroldiscordbot.utils
+package io.github.maybeashleyidk.remotecontroldiscordbot.internal.utils
 
 import java.nio.channels.FileChannel
 import java.nio.file.FileAlreadyExistsException

@@ -1,4 +1,4 @@
-package io.github.maybeashleyidk.remotecontroldiscordbot.utils
+package io.github.maybeashleyidk.remotecontroldiscordbot.internal.utils
 
 import io.github.maybeashleyidk.remotecontroldiscordbot.logging.Logger
 import io.github.maybeashleyidk.remotecontroldiscordbot.logging.Logger.Companion.logInfo

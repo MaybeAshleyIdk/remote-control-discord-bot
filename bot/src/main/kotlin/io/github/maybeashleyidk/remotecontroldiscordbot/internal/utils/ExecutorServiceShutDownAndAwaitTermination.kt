@@ -1,4 +1,4 @@
-package io.github.maybeashleyidk.remotecontroldiscordbot.utils
+package io.github.maybeashleyidk.remotecontroldiscordbot.internal.utils
 
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit

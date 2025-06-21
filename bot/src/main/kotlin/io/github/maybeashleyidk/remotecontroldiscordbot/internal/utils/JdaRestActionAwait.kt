@@ -1,4 +1,4 @@
-package io.github.maybeashleyidk.remotecontroldiscordbot.utils
+package io.github.maybeashleyidk.remotecontroldiscordbot.internal.utils
 
 import kotlinx.coroutines.future.await
 import net.dv8tion.jda.api.requests.RestAction

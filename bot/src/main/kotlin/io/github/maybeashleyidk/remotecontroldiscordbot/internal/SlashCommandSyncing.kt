@@ -1,11 +1,11 @@
-package io.github.maybeashleyidk.remotecontroldiscordbot
+package io.github.maybeashleyidk.remotecontroldiscordbot.internal
 
+import io.github.maybeashleyidk.remotecontroldiscordbot.internal.utils.await
 import io.github.maybeashleyidk.remotecontroldiscordbot.localcommands.LocalCommand
 import io.github.maybeashleyidk.remotecontroldiscordbot.localcommands.LocalCommandDetails
 import io.github.maybeashleyidk.remotecontroldiscordbot.localcommands.LocalCommandName
 import io.github.maybeashleyidk.remotecontroldiscordbot.logging.Logger
 import io.github.maybeashleyidk.remotecontroldiscordbot.logging.Logger.Companion.logInfo
-import io.github.maybeashleyidk.remotecontroldiscordbot.utils.await
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.Deferred

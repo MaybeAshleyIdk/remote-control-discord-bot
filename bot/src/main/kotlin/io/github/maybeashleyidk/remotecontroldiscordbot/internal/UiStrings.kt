@@ -1,4 +1,4 @@
-package io.github.maybeashleyidk.remotecontroldiscordbot
+package io.github.maybeashleyidk.remotecontroldiscordbot.internal
 
 import net.dv8tion.jda.api.interactions.DiscordLocale
 import java.text.NumberFormat

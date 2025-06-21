@@ -1,5 +1,6 @@
-package io.github.maybeashleyidk.remotecontroldiscordbot.utils
+package io.github.maybeashleyidk.remotecontroldiscordbot.internal.utils
 
+import io.github.maybeashleyidk.remotecontroldiscordbot.utils.ArgumentVector
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
