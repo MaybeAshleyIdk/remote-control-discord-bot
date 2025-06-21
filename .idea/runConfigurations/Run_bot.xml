@@ -10,7 +10,7 @@
       </option>
       <option name="taskNames">
         <list>
-          <option value=":bot:run" />
+          <option value=":main:run" />
         </list>
       </option>
       <option name="vmOptions" />

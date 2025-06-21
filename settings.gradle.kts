@@ -20,5 +20,5 @@ include(
 	":logging:impl-stderr",
 	":logging:slf4j",
 	":local-commands",
-	":bot",
+	":main",
 )

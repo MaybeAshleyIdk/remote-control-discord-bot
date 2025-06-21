@@ -10,7 +10,7 @@
       </option>
       <option name="taskNames">
         <list>
-          <option value=":bot:copyArtifactToProjectRoot" />
+          <option value=":main:copyArtifactToProjectRoot" />
         </list>
       </option>
       <option name="vmOptions" />
