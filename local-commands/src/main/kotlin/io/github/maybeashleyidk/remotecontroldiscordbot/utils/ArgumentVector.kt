@@ -3,7 +3,7 @@ package io.github.maybeashleyidk.remotecontroldiscordbot.utils
 import kotlinx.collections.immutable.ImmutableList
 
 @JvmInline
-internal value class ArgumentVector(private val list: ImmutableList<String>) {
+public value class ArgumentVector(private val list: ImmutableList<String>) {
 
 	init {
 		require(list.isNotEmpty()) { "An argument vector must not be empty" }
@@ -11,11 +11,11 @@ internal value class ArgumentVector(private val list: ImmutableList<String>) {
 		require(list.all { '\u0000' !in it }) { "The argument vector's elements must not contain an ASCII NUL character" }
 	}
 
-	fun toCommandLine(): String {
+	public fun toCommandLine(): String {
 		return this.list.joinToString(separator = " ", transform = String::quotedIfNecessary)
 	}
 
-	fun toArray(): Array<String> {
+	public fun toArray(): Array<String> {
 		return this.list.toTypedArray()
 	}
 

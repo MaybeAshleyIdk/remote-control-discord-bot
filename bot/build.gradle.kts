@@ -30,6 +30,7 @@ dependencies {
 		exclude(module = "opus-java")
 	}
 
+	implementation(projects.localCommands)
 	implementation(projects.logging.implStderr)
 	implementation(projects.logging.slf4j)
 }

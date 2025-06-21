@@ -14,35 +14,35 @@ import net.dv8tion.jda.api.utils.MiscUtil as JdaMiscUtils
 private val AUTHORIZE_LINE_REGEX: Regex = Regex("""^\s*authorize\s+(?<userId>[1-9][0-9]*)\s*$""")
 private val COMMAND_LINE_REGEX: Regex = Regex("""^\s*command\s+(?<commandName>[^:]+):\s*(?<commandLine>\S+.*)?$""")
 
-internal sealed class LocalCommandsConfigParsingResult {
+public sealed class LocalCommandsConfigParsingResult {
 
-	data class Success(val config: LocalCommandsConfig) : LocalCommandsConfigParsingResult()
+	public data class Success(public val config: LocalCommandsConfig) : LocalCommandsConfigParsingResult()
 
-	sealed class Failure : LocalCommandsConfigParsingResult() {
+	public sealed class Failure : LocalCommandsConfigParsingResult() {
 
-		data class InvalidLine(val lineNumber: Int) : Failure()
+		public data class InvalidLine(public val lineNumber: Int) : Failure()
 
-		data class InvalidCommandName(
-			val lineNumber: Int,
-			val columnNumber: Int,
-			val invalidCommandName: String,
+		public data class InvalidCommandName(
+			public val lineNumber: Int,
+			public val columnNumber: Int,
+			public val invalidCommandName: String,
 		) : Failure()
 
-		data class EmptyCommandLine(
-			val lineNumber: Int,
-			val columnNumber: Int,
+		public data class EmptyCommandLine(
+			public val lineNumber: Int,
+			public val columnNumber: Int,
 		) : Failure()
 
-		data class DuplicateCommand(
-			val lineNumber: Int,
-			val commandName: LocalCommandName,
+		public data class DuplicateCommand(
+			public val lineNumber: Int,
+			public val commandName: LocalCommandName,
 		) : Failure()
 
-		data object ZeroCommandsDefined : Failure()
+		public data object ZeroCommandsDefined : Failure()
 	}
 }
 
-internal fun String.parseToLocalCommandsConfig(): LocalCommandsConfigParsingResult {
+public fun String.parseToLocalCommandsConfig(): LocalCommandsConfigParsingResult {
 	val lines: Sequence<IndexedValue<String>> = this.lineSequence()
 		.withIndex()
 		.map { (index: Int, line: String) ->

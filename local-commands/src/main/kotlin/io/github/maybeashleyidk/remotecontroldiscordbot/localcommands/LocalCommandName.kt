@@ -3,15 +3,15 @@ package io.github.maybeashleyidk.remotecontroldiscordbot.localcommands
 import net.dv8tion.jda.api.interactions.commands.build.CommandData.MAX_NAME_LENGTH
 
 @JvmInline
-internal value class LocalCommandName private constructor(private val nameString: String) {
+public value class LocalCommandName private constructor(private val nameString: String) {
 
 	override fun toString(): String {
 		return this.nameString
 	}
 
-	companion object {
+	public companion object {
 
-		fun ofString(nameString: String): LocalCommandName? {
+		public fun ofString(nameString: String): LocalCommandName? {
 			if (!(nameString.isLocalCommandName())) {
 				return null
 			}
