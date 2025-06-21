@@ -2,8 +2,8 @@ package io.github.maybeashleyidk.remotecontroldiscordbot
 
 import io.github.maybeashleyidk.remotecontroldiscordbot.ExitStatus.ArgumentWithoutPrefix
 import io.github.maybeashleyidk.remotecontroldiscordbot.ExitStatus.EmptyArgument
-import io.github.maybeashleyidk.remotecontroldiscordbot.ExitStatus.ExcessiveArguments
 import io.github.maybeashleyidk.remotecontroldiscordbot.ExitStatus.EmptyInstanceName
+import io.github.maybeashleyidk.remotecontroldiscordbot.ExitStatus.ExcessiveArguments
 import io.github.maybeashleyidk.remotecontroldiscordbot.ExitStatus.InvalidInstanceName
 import io.github.maybeashleyidk.remotecontroldiscordbot.ExitStatus.InvalidToken
 import io.github.maybeashleyidk.remotecontroldiscordbot.ExitStatus.LocalCommandsConfigDuplicateCommand
@@ -23,6 +23,7 @@ import io.github.maybeashleyidk.remotecontroldiscordbot.localcommands.LocalComma
 import io.github.maybeashleyidk.remotecontroldiscordbot.localcommands.parseToLocalCommandsConfig
 import io.github.maybeashleyidk.remotecontroldiscordbot.logging.stderr.StderrLogger
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.runBlocking
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import kotlin.io.path.div
@@ -125,7 +126,9 @@ private fun main(processInformation: ProcessInformation, arguments: ProgramArgum
 
 	val token: BotToken = getTokenOrExit(processInformation, instanceConfigDirectoryPath)
 
-	runBot(token, localCommandsConfig, logger = StderrLogger)
+	runBlocking {
+		launchBot(token, localCommandsConfig, logger = StderrLogger)
+	}
 }
 
 private fun getLocalCommandsConfigOrExit(

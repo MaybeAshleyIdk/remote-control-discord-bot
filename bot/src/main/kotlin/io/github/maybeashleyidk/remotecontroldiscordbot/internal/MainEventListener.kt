@@ -21,6 +21,7 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.future.asDeferred
 import kotlinx.coroutines.launch
@@ -62,7 +63,13 @@ internal class MainEventListener(
 
 	private val logger: Logger = logger.withScope("MainEventListener")
 
-	private var closing: AtomicBoolean = AtomicBoolean(false)
+	private val closing: AtomicBoolean = AtomicBoolean(false)
+
+	private val eventListenerCoroutineScope: CoroutineScope = parentCoroutineScope +
+		Dispatchers.Default +
+		NestedSupervisorJob()
+
+	private val eventHandlingCoroutineScope: CoroutineScope = eventListenerCoroutineScope + NestedSupervisorJob()
 
 	private val commandExecutionExecutorService: ExecutorService =
 		ThreadPoolExecutor(
@@ -76,17 +83,21 @@ internal class MainEventListener(
 	private val commandExecutionCoroutineContext: CoroutineContext =
 		commandExecutionExecutorService.asCoroutineDispatcher()
 
-	private val eventHandlingCoroutineScope: CoroutineScope = parentCoroutineScope +
-		Dispatchers.Default +
-		NestedSupervisorJob()
-
 	init {
+		eventListenerCoroutineScope.launch {
+			try {
+				awaitCancellation()
+			} finally {
+				this@MainEventListener.close()
+			}
+		}
+
 		deferredConfig.invokeOnCompletion { cause: Throwable? ->
-			if (cause != null) {
+			if ((cause != null) || this.closing.get()) {
 				return@invokeOnCompletion
 			}
 
-			this@MainEventListener.logger.logInfo("Ready to receive slash command interaction events")
+			this.logger.logInfo("Ready to receive slash command interaction events")
 		}
 	}
 
@@ -230,8 +241,9 @@ internal class MainEventListener(
 		}
 
 		this.logger.logInfo("Closing the event listener")
+
+		this.eventListenerCoroutineScope.cancel(message = "The event listener was closed")
 		this.commandExecutionExecutorService.shutDownAndAwaitTermination()
-		this.eventHandlingCoroutineScope.cancel(message = "The event listener was closed")
 	}
 }
 
