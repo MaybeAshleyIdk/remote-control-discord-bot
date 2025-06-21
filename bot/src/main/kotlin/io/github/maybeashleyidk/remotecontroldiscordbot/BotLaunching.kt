@@ -13,8 +13,11 @@ import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.InternalForInheritanceCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import net.dv8tion.jda.api.JDA as Jda
 import net.dv8tion.jda.api.JDABuilder as JdaBuilder
@@ -22,8 +25,17 @@ import net.dv8tion.jda.api.OnlineStatus
 import net.dv8tion.jda.api.hooks.EventListener
 import java.util.concurrent.atomic.AtomicBoolean
 
-public fun CoroutineScope.launchBot(token: BotToken, localCommandsConfig: LocalCommandsConfig, logger: Logger) {
-	launch {
+private sealed class RunState {
+
+	data object Resumed : RunState()
+
+	data class Paused(val reason: BotPauseReason?) : RunState()
+}
+
+public fun CoroutineScope.launchBot(token: BotToken, localCommandsConfig: LocalCommandsConfig, logger: Logger): Bot {
+	val runStateFlow: MutableStateFlow<RunState> = MutableStateFlow(RunState.Resumed)
+
+	val botJob: Job = launch {
 		val deferredMainEventListenerConfig: CompletableDeferred<MainEventListener.Config> = CompletableDeferred()
 
 		val jda: Jda =
@@ -40,6 +52,18 @@ public fun CoroutineScope.launchBot(token: BotToken, localCommandsConfig: LocalC
 		syncWithJda(jda, logger)
 
 		jda.setUp(localCommandsConfig, deferredMainEventListenerConfig, logger)
+	}
+
+	@OptIn(InternalForInheritanceCoroutinesApi::class)
+	return object : Bot, Job by botJob {
+
+		override fun pause(reason: BotPauseReason?) {
+			runStateFlow.value = RunState.Paused(reason)
+		}
+
+		override fun resume() {
+			runStateFlow.value = RunState.Resumed
+		}
 	}
 }
 

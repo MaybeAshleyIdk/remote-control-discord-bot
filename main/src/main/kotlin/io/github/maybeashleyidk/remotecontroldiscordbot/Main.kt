@@ -23,11 +23,15 @@ import io.github.maybeashleyidk.remotecontroldiscordbot.localcommands.LocalComma
 import io.github.maybeashleyidk.remotecontroldiscordbot.localcommands.parseToLocalCommandsConfig
 import io.github.maybeashleyidk.remotecontroldiscordbot.logging.stderr.StderrLogger
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import kotlin.io.path.div
 import kotlin.io.path.readText
+import kotlin.time.Duration.Companion.seconds
 
 private val LOCAL_COMMANDS_CONFIG_FILE_RELATIVE_PATH: Path = Path.of("commands.cfg")
 private val TOKEN_FILE_RELATIVE_PATH: Path = Path.of("token.txt")
@@ -127,7 +131,10 @@ private fun main(processInformation: ProcessInformation, arguments: ProgramArgum
 	val token: BotToken = getTokenOrExit(processInformation, instanceConfigDirectoryPath)
 
 	runBlocking {
-		launchBot(token, localCommandsConfig, logger = StderrLogger)
+		val bot: Bot = launchBot(token, localCommandsConfig, logger = StderrLogger)
+
+		delay(6.seconds)
+		bot.cancel(message = "Manually cancelled after testing was completed")
 	}
 }
 
