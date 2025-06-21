@@ -6,7 +6,7 @@ internal enum class ExitStatus(val code: Int) {
 	ExcessiveArguments(4),
 	EmptyArgument(9),
 	ArgumentWithoutPrefix(13),
-	InstanceNameEmpty(14),
+	EmptyInstanceName(14),
 	InvalidInstanceName(15),
 	NonExistingFile(24),
 	HomeEnvironmentVariableUnsetOrEmpty(48),
