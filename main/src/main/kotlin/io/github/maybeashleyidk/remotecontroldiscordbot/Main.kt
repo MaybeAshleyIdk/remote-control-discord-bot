@@ -3,7 +3,7 @@ package io.github.maybeashleyidk.remotecontroldiscordbot
 import io.github.maybeashleyidk.remotecontroldiscordbot.ExitStatus.ArgumentWithoutPrefix
 import io.github.maybeashleyidk.remotecontroldiscordbot.ExitStatus.EmptyArgument
 import io.github.maybeashleyidk.remotecontroldiscordbot.ExitStatus.ExcessiveArguments
-import io.github.maybeashleyidk.remotecontroldiscordbot.ExitStatus.InstanceNameEmpty
+import io.github.maybeashleyidk.remotecontroldiscordbot.ExitStatus.EmptyInstanceName
 import io.github.maybeashleyidk.remotecontroldiscordbot.ExitStatus.InvalidInstanceName
 import io.github.maybeashleyidk.remotecontroldiscordbot.ExitStatus.InvalidToken
 import io.github.maybeashleyidk.remotecontroldiscordbot.ExitStatus.LocalCommandsConfigDuplicateCommand
@@ -84,7 +84,7 @@ private fun handleProgramArgumentParsingFailure(
 				ExitInformation(
 					message = "instance name must not be empty",
 					usageIncluded = true,
-					exitStatus = InstanceNameEmpty,
+					exitStatus = EmptyInstanceName,
 				)
 			}
 
