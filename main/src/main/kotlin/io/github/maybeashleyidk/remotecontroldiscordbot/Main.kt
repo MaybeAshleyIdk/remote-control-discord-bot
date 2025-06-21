@@ -12,17 +12,21 @@ import io.github.maybeashleyidk.remotecontroldiscordbot.ExitStatus.LocalCommands
 import io.github.maybeashleyidk.remotecontroldiscordbot.ExitStatus.LocalCommandsConfigInvalidLine
 import io.github.maybeashleyidk.remotecontroldiscordbot.ExitStatus.LocalCommandsConfigZeroCommandsDefined
 import io.github.maybeashleyidk.remotecontroldiscordbot.ExitStatus.NonExistingFile
+import io.github.maybeashleyidk.remotecontroldiscordbot.args.INSTANCE_NAME_ARGUMENT_PREFIX
+import io.github.maybeashleyidk.remotecontroldiscordbot.args.ProgramArguments
+import io.github.maybeashleyidk.remotecontroldiscordbot.args.ProgramArgumentsParsingResult
+import io.github.maybeashleyidk.remotecontroldiscordbot.args.createProgramUsage
+import io.github.maybeashleyidk.remotecontroldiscordbot.args.parseProgramArguments
 import io.github.maybeashleyidk.remotecontroldiscordbot.env.getInstanceConfigDirectoryPathOrExit
 import io.github.maybeashleyidk.remotecontroldiscordbot.localcommands.LocalCommandsConfig
 import io.github.maybeashleyidk.remotecontroldiscordbot.localcommands.LocalCommandsConfigParsingResult
 import io.github.maybeashleyidk.remotecontroldiscordbot.localcommands.parseToLocalCommandsConfig
 import io.github.maybeashleyidk.remotecontroldiscordbot.logging.stderr.StderrLogger
+import kotlinx.collections.immutable.toImmutableList
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import kotlin.io.path.div
 import kotlin.io.path.readText
-
-private const val INSTANCE_NAME_ARGUMENT_PREFIX: String = "instance_name="
 
 private val LOCAL_COMMANDS_CONFIG_FILE_RELATIVE_PATH: Path = Path.of("commands.cfg")
 private val TOKEN_FILE_RELATIVE_PATH: Path = Path.of("token.txt")
@@ -33,66 +37,87 @@ class Main {
 
 		@JvmStatic
 		fun main(args: Array<String>) {
-			main(processInformation = ProcessInformation.determine(mainClass = Main::class.java), args = args)
+			val processInformation: ProcessInformation = ProcessInformation.determine(mainClass = Main::class.java)
+
+			val parsedArguments: ProgramArguments =
+				when (val result: ProgramArgumentsParsingResult = parseProgramArguments(args.toImmutableList())) {
+					is ProgramArgumentsParsingResult.Success -> result.arguments
+					is ProgramArgumentsParsingResult.Failure -> {
+						handleProgramArgumentParsingFailure(processInformation, failure = result)
+					}
+				}
+
+			main(processInformation = processInformation, arguments = parsedArguments)
 		}
 	}
 }
 
-private fun main(processInformation: ProcessInformation, args: Array<String>) {
-	main(processInformation, instanceName = getInstanceNameOrExit(processInformation, args))
-}
+private fun handleProgramArgumentParsingFailure(
+	processInformation: ProcessInformation,
+	failure: ProgramArgumentsParsingResult.Failure,
+): Nothing {
+	data class ExitInformation(
+		val message: String,
+		val usageIncluded: Boolean,
+		val exitStatus: ExitStatus,
+	)
 
-private fun getInstanceNameOrExit(processInformation: ProcessInformation, args: Array<String>): InstanceName {
-	val usage = "usage: ${processInformation.usageExecutableArgumentsString} [$INSTANCE_NAME_ARGUMENT_PREFIX<name>]"
-
-	return when (args.size) {
-		0 -> InstanceName.DEFAULT
-
-		1 -> {
-			val arg: String = args[0]
-
-			if (arg.isEmpty()) {
-				System.err.println("${processInformation.stderrLoggingTag}: argument must not be empty\n$usage")
-				exitProcess(EmptyArgument)
+	val information: ExitInformation =
+		when (failure) {
+			is ProgramArgumentsParsingResult.EmptyArgument -> {
+				ExitInformation(
+					message = "argument must not be empty",
+					usageIncluded = true,
+					exitStatus = EmptyArgument,
+				)
 			}
 
-			val instanceNameStr: String = arg.removePrefix(INSTANCE_NAME_ARGUMENT_PREFIX)
-
-			if (instanceNameStr == arg) {
-				val message: String = "${processInformation.stderrLoggingTag}: $arg: must have " +
-					"the prefix \"$INSTANCE_NAME_ARGUMENT_PREFIX\"\n$usage"
-				System.err.println(message)
-
-				exitProcess(ArgumentWithoutPrefix)
+			is ProgramArgumentsParsingResult.ArgumentWithoutPrefix -> {
+				ExitInformation(
+					message = "${failure.argument}: must have the prefix \"$INSTANCE_NAME_ARGUMENT_PREFIX\"",
+					usageIncluded = true,
+					exitStatus = ArgumentWithoutPrefix,
+				)
 			}
 
-			if (instanceNameStr.isEmpty()) {
-				val message = "${processInformation.stderrLoggingTag}: instance name must not be empty\n$usage"
-				System.err.println(message)
-
-				exitProcess(InstanceNameEmpty)
+			is ProgramArgumentsParsingResult.EmptyInstanceName -> {
+				ExitInformation(
+					message = "instance name must not be empty",
+					usageIncluded = true,
+					exitStatus = InstanceNameEmpty,
+				)
 			}
 
-			val instanceName: InstanceName? = InstanceName.ofString(instanceNameStr)
-
-			if (instanceName == null) {
-				val message = "${processInformation.stderrLoggingTag}: $instanceNameStr: invalid instance name"
-				System.err.println(message)
-
-				exitProcess(InvalidInstanceName)
+			is ProgramArgumentsParsingResult.InvalidInstanceName -> {
+				ExitInformation(
+					message = "${failure.instanceNameString}: invalid instance name",
+					usageIncluded = false,
+					exitStatus = InvalidInstanceName,
+				)
 			}
 
-			instanceName
+			is ProgramArgumentsParsingResult.ExcessiveArguments -> {
+				ExitInformation(
+					message = "too many arguments: ${failure.count}",
+					usageIncluded = true,
+					exitStatus = ExcessiveArguments,
+				)
+			}
 		}
 
-		else -> {
-			System.err.println("${processInformation.stderrLoggingTag}: too many arguments: ${args.size}\n$usage")
-			exitProcess(ExcessiveArguments)
+	val messageWithUsage: String = processInformation.stderrLoggingTag + ": " + information.message +
+		if (information.usageIncluded) {
+			"\n" + createProgramUsage(argv0 = processInformation.usageExecutableArgumentsString)
+		} else {
+			""
 		}
-	}
+	System.err.println(messageWithUsage)
+
+	exitProcess(information.exitStatus)
 }
 
-private fun main(processInformation: ProcessInformation, instanceName: InstanceName) {
+private fun main(processInformation: ProcessInformation, arguments: ProgramArguments) {
+	val instanceName: InstanceName = arguments.instanceName ?: InstanceName.DEFAULT
 	val instanceConfigDirectoryPath: Path = getInstanceConfigDirectoryPathOrExit(processInformation, instanceName)
 
 	val localCommandsConfig: LocalCommandsConfig =
