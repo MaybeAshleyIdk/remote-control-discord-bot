@@ -1,5 +1,6 @@
 package io.github.maybeashleyidk.remotecontroldiscordbot
 
+import io.github.maybeashleyidk.remotecontroldiscordbot.internal.LocalCommandExecutor
 import io.github.maybeashleyidk.remotecontroldiscordbot.internal.MainEventListener
 import io.github.maybeashleyidk.remotecontroldiscordbot.internal.UiStringResolver
 import io.github.maybeashleyidk.remotecontroldiscordbot.internal.syncSlashCommandsWithLocalCommands
@@ -48,10 +49,20 @@ private fun CoroutineScope.startJda(
 	deferredMainEventListenerConfig: CompletableDeferred<MainEventListener.Config>,
 	logger: Logger,
 ): Jda {
+	val localCommandExecutor = LocalCommandExecutor(logger)
+	launch {
+		try {
+			awaitCancellation()
+		} finally {
+			localCommandExecutor.close()
+		}
+	}
+
 	val mainEventListener: EventListener =
 		MainEventListener(
 			parentCoroutineScope = this,
 			deferredConfig = deferredMainEventListenerConfig,
+			localCommandExecutor = localCommandExecutor,
 			uiStringResolver = UiStringResolver.English,
 			logger = logger,
 		)

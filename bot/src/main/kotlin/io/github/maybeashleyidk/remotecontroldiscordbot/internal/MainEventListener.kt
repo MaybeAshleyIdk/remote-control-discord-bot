@@ -4,11 +4,8 @@ import io.github.maybeashleyidk.remotecontroldiscordbot.internal.UiStringResolve
 import io.github.maybeashleyidk.remotecontroldiscordbot.internal.UiStringResolver.WithLocale.Companion.withLocale
 import io.github.maybeashleyidk.remotecontroldiscordbot.internal.utils.NestedSupervisorJob
 import io.github.maybeashleyidk.remotecontroldiscordbot.internal.utils.await
-import io.github.maybeashleyidk.remotecontroldiscordbot.internal.utils.exec
 import io.github.maybeashleyidk.remotecontroldiscordbot.internal.utils.isUtf8SafePrintable
 import io.github.maybeashleyidk.remotecontroldiscordbot.internal.utils.plus
-import io.github.maybeashleyidk.remotecontroldiscordbot.internal.utils.shutDownAndAwaitTermination
-import io.github.maybeashleyidk.remotecontroldiscordbot.internal.utils.useSecureTemporaryFile
 import io.github.maybeashleyidk.remotecontroldiscordbot.localcommands.LocalCommand
 import io.github.maybeashleyidk.remotecontroldiscordbot.logging.Logger
 import io.github.maybeashleyidk.remotecontroldiscordbot.logging.Logger.Companion.logInfo
@@ -19,14 +16,13 @@ import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.future.asDeferred
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
-import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withContext
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.events.GenericEvent
@@ -42,16 +38,12 @@ import java.io.Closeable
 import java.nio.ByteBuffer
 import java.nio.channels.Channels
 import java.nio.channels.FileChannel
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.SynchronousQueue
-import java.util.concurrent.ThreadPoolExecutor
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.coroutines.CoroutineContext
 
 internal class MainEventListener(
 	parentCoroutineScope: CoroutineScope,
 	private val deferredConfig: Deferred<Config>,
+	private val localCommandExecutor: LocalCommandExecutor,
 	private val uiStringResolver: UiStringResolver,
 	logger: Logger,
 ) : EventListener, Closeable {
@@ -65,26 +57,9 @@ internal class MainEventListener(
 
 	private val closing: AtomicBoolean = AtomicBoolean(false)
 
-	private val eventListenerCoroutineScope: CoroutineScope = parentCoroutineScope +
-		Dispatchers.Default +
-		NestedSupervisorJob()
-
-	private val eventHandlingCoroutineScope: CoroutineScope = eventListenerCoroutineScope + NestedSupervisorJob()
-
-	private val commandExecutionExecutorService: ExecutorService =
-		ThreadPoolExecutor(
-			/* corePoolSize = */ 0,
-			/* maximumPoolSize = */ 10,
-			/* keepAliveTime = */ 60,
-			/* unit = */ TimeUnit.SECONDS,
-			/* workQueue = */ SynchronousQueue(),
-		)
-
-	private val commandExecutionCoroutineContext: CoroutineContext =
-		commandExecutionExecutorService.asCoroutineDispatcher()
-
-	init {
-		eventListenerCoroutineScope.launch {
+	private val coroutineScope: CoroutineScope = parentCoroutineScope + Dispatchers.Default + NestedSupervisorJob()
+	private val closeOnCancellationJob: Job =
+		coroutineScope.launch {
 			try {
 				awaitCancellation()
 			} finally {
@@ -92,6 +67,7 @@ internal class MainEventListener(
 			}
 		}
 
+	init {
 		deferredConfig.invokeOnCompletion { cause: Throwable? ->
 			if ((cause != null) || this.closing.get()) {
 				return@invokeOnCompletion
@@ -122,7 +98,7 @@ internal class MainEventListener(
 			}
 
 			is SlashCommandInteractionEvent -> {
-				this.eventHandlingCoroutineScope.launch {
+				this.coroutineScope.launch {
 					if (this@MainEventListener.closing.get()) {
 						return@launch
 					}
@@ -168,70 +144,30 @@ internal class MainEventListener(
 			.submit()
 			.asDeferred()
 
-		val basePrefix = "remote-control-discord-bot_command_${localCommand.name}"
-		useSecureTemporaryFile(prefix = "${basePrefix}_stdout") { stdoutFile: FileChannel ->
-			useSecureTemporaryFileIf(
-				condition = !(localCommand.isStderrIgnored),
-				prefix = "${basePrefix}_stderr",
-			) { stderrFile: FileChannel? ->
-				val messageCreateData: MessageCreateData =
-					this.executeCommand(
-						localCommand = localCommand,
-						stdoutFile = stdoutFile,
-						stderrFile = stderrFile,
-						uiStringResolver = uiStringResolver,
-					)
+		this.localCommandExecutor.executeCommand(localCommand) { result: LocalCommandExecutor.CommandResult ->
+			val message: String =
+				if (result.exitStatusCode == 0) {
+					uiStringResolver.resolve(UiStringKey.LocalCommandExecution.Success)
+				} else {
+					uiStringResolver.resolve(UiStringKey.LocalCommandExecution.Failure, result.exitStatusCode)
+				}
 
-				deferredInteractionHook.await().sendMessage(messageCreateData).await()
-			}
-		}
-	}
+			val (stdoutFileUpload: FileUpload?, stderrFileUpload: FileUpload?) = withContext(Dispatchers.IO) {
+				val stdoutFileUpload: Deferred<FileUpload?> =
+					async { result.stdoutFile.toFileUpload(basename = "stdout") }
 
-	private suspend fun executeCommand(
-		localCommand: LocalCommand,
-		stdoutFile: FileChannel,
-		stderrFile: FileChannel?,
-		uiStringResolver: UiStringResolver.WithLocale,
-	): MessageCreateData {
-		this.logger.logInfo("Executing the local command ${localCommand.toLogString()}")
+				val stderrFileUpload: Deferred<FileUpload?>? =
+					result.stderrFile?.let { async { it.toFileUpload(basename = "stderr") } }
 
-		val exitStatusCode: Int = supervisorScope {
-			withContext(commandExecutionCoroutineContext) {
-				exec(
-					argv = localCommand.argv,
-					stdout = Channels.newOutputStream(stdoutFile),
-					stderr = stderrFile?.let(Channels::newOutputStream),
-				)
-			}
-		}
-
-		if (exitStatusCode == 0) {
-			this.logger.logInfo("Successfully executed the local command ${localCommand.toLogString()}")
-		} else {
-			val message = "The local command ${localCommand.toLogString()} exited with the status code $exitStatusCode"
-			this.logger.logWarning(message)
-		}
-
-		val message: String =
-			if (exitStatusCode == 0) {
-				uiStringResolver.resolve(UiStringKey.LocalCommandExecution.Success)
-			} else {
-				uiStringResolver.resolve(UiStringKey.LocalCommandExecution.Failure, exitStatusCode)
+				stdoutFileUpload.await() to stderrFileUpload?.await()
 			}
 
-		val (stdoutFileUpload: FileUpload?, stderrFileUpload: FileUpload?) = withContext(Dispatchers.IO) {
-			val stdoutFileUpload: Deferred<FileUpload?> = async { stdoutFile.toFileUpload(basename = "stdout") }
-
-			val stderrFileUpload: Deferred<FileUpload?>? =
-				stderrFile?.let { async { it.toFileUpload(basename = "stderr") } }
-
-			stdoutFileUpload.await() to stderrFileUpload?.await()
+			val messageCreateData: MessageCreateData = MessageCreateBuilder()
+				.setContent(message)
+				.setFiles(listOfNotNull(stdoutFileUpload, stderrFileUpload))
+				.build()
+			deferredInteractionHook.await().sendMessage(messageCreateData).await()
 		}
-
-		return MessageCreateBuilder()
-			.setContent(message)
-			.setFiles(listOfNotNull(stdoutFileUpload, stderrFileUpload))
-			.build()
 	}
 
 	override fun close() {
@@ -240,24 +176,14 @@ internal class MainEventListener(
 			return
 		}
 
-		this.logger.logInfo("Closing the event listener")
+		this.logger.logInfo("Closing...")
 
-		this.eventListenerCoroutineScope.cancel(message = "The event listener was closed")
-		this.commandExecutionExecutorService.shutDownAndAwaitTermination()
+		val cancelMessage = "The event listener was closed"
+		this.coroutineScope.cancel(message = cancelMessage)
+		this.closeOnCancellationJob.cancel(message = cancelMessage)
+
+		this.logger.logInfo("Successfully closed")
 	}
-}
-
-private inline fun <R> useSecureTemporaryFileIf(
-	condition: Boolean,
-	prefix: String? = null,
-	suffix: String? = null,
-	block: (channel: FileChannel?) -> R,
-): R {
-	if (!condition) {
-		return block(null)
-	}
-
-	return useSecureTemporaryFile(prefix = prefix, suffix = suffix, block)
 }
 
 private fun FileChannel.toFileUpload(basename: String): FileUpload? {
@@ -266,8 +192,6 @@ private fun FileChannel.toFileUpload(basename: String): FileUpload? {
 	if (size == 0L) {
 		return null
 	}
-
-	this.position(0)
 
 	if (size >= DEFAULT_BUFFER_SIZE) {
 		return FileUpload.fromData(Channels.newInputStream(this), basename)
@@ -290,8 +214,4 @@ private fun FileChannel.toFileUpload(basename: String): FileUpload? {
 
 private fun User.toLogString(): String {
 	return "@${this.name} (${this.id})"
-}
-
-private fun LocalCommand.toLogString(): String {
-	return "\"${this.name}\" (${this.argv.toCommandLine()})"
 }
