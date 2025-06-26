@@ -24,7 +24,7 @@ internal fun Jda.performGracefulShutdown(logger: Logger) {
 	}
 
 	val message: String = "Graceful shutdown did not succeed after $GRACEFUL_SHUTDOWN_TIMEOUT_DURATION." +
-		"Attempting a forceful shutdown..."
+		" Attempting a forceful shutdown..."
 	logger.logWarning(message)
 
 	this.shutdownNow()
