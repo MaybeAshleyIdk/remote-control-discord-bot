@@ -1,5 +1,6 @@
 package io.github.maybeashleyidk.remotecontroldiscordbot.internal
 
+import io.github.maybeashleyidk.remotecontroldiscordbot.BotState
 import io.github.maybeashleyidk.remotecontroldiscordbot.internal.UiStringResolver.WithLocale.Companion.resolve
 import io.github.maybeashleyidk.remotecontroldiscordbot.internal.UiStringResolver.WithLocale.Companion.withLocale
 import io.github.maybeashleyidk.remotecontroldiscordbot.internal.utils.NestedSupervisorJob
@@ -43,6 +44,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 internal class MainEventListener(
 	parentCoroutineScope: CoroutineScope,
 	private val deferredConfig: Deferred<Config>,
+	private val loadState: () -> BotState,
 	private val localCommandExecutor: LocalCommandExecutor,
 	private val uiStringResolver: UiStringResolver,
 	logger: Logger,
@@ -128,6 +130,29 @@ internal class MainEventListener(
 			this.logger.logInfo("The unauthorized user ${event.user.toLogString()} tried to use a slash command")
 
 			return
+		}
+
+		when (val state: BotState = this.loadState()) {
+			is BotState.Resumed -> Unit
+			is BotState.Paused -> {
+				val message: String =
+					if (state.reason != null) {
+						uiStringResolver.resolve(UiStringKey.PausedWithReason, state.reason.toString())
+						// TODO: cut message if too long
+					} else {
+						uiStringResolver.resolve(UiStringKey.PausedWithoutReason)
+					}
+
+				event.reply(message)
+					.setEphemeral(true)
+					.await()
+
+				val logMessage: String = "Rejected a slash command interaction because the bot is paused " +
+					(state.reason?.let { "with the reason: \"$it\"" } ?: "without a reason")
+				this.logger.logInfo(logMessage)
+
+				return
+			}
 		}
 
 		val localCommand: LocalCommand? = config.commandsMap[event.interaction.commandIdLong]

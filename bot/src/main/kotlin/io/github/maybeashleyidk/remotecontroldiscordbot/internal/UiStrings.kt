@@ -13,6 +13,9 @@ internal sealed interface UiStringKey {
 
 	data object UnauthorizedUser : WithoutArguments
 
+	data object PausedWithReason : WithOneTextArgument
+	data object PausedWithoutReason : WithoutArguments
+
 	object LocalCommandExecution {
 		data object Success : WithoutArguments
 		data object Failure : WithOneIntegerArgument
@@ -65,6 +68,7 @@ private object EnglishUiStringResolver : UiStringResolver {
 
 		return when (key) {
 			UiStringKey.UnauthorizedUser -> "You are not authorized to use this app"
+			UiStringKey.PausedWithoutReason -> "The bot is paused (without a reason)"
 			UiStringKey.LocalCommandExecution.Success -> "The command was executed successfully"
 		}
 	}
@@ -72,6 +76,7 @@ private object EnglishUiStringResolver : UiStringResolver {
 	override fun resolve(locale: DiscordLocale, key: UiStringKey.WithOneTextArgument, arg: String): String {
 		return when (key) {
 			UiStringKey.SlashCommandDescription -> "Executes the local command:${EN_SPACE}$arg"
+			UiStringKey.PausedWithReason -> "The bot is paused with the reason *\"$arg\"*"
 		}
 	}
 

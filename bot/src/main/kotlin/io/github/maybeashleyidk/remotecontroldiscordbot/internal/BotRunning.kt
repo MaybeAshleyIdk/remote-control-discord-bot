@@ -1,6 +1,11 @@
 package io.github.maybeashleyidk.remotecontroldiscordbot.internal
 
+import io.github.maybeashleyidk.remotecontroldiscordbot.BotState
+import io.github.maybeashleyidk.remotecontroldiscordbot.BotStateReference
 import io.github.maybeashleyidk.remotecontroldiscordbot.BotToken
+import io.github.maybeashleyidk.remotecontroldiscordbot.internal.state.CoroutineScopedBotStateReference
+import io.github.maybeashleyidk.remotecontroldiscordbot.internal.state.JavaAtomicBotStateReference
+import io.github.maybeashleyidk.remotecontroldiscordbot.internal.state.LoggingBotStateReference
 import io.github.maybeashleyidk.remotecontroldiscordbot.internal.utils.performGracefulShutdown
 import io.github.maybeashleyidk.remotecontroldiscordbot.internal.utils.suspendUntilShutdown
 import io.github.maybeashleyidk.remotecontroldiscordbot.localcommands.LocalCommand
@@ -21,14 +26,30 @@ import net.dv8tion.jda.api.OnlineStatus
 import net.dv8tion.jda.api.hooks.EventListener
 import java.util.concurrent.atomic.AtomicBoolean
 
-internal suspend fun runBot(token: BotToken, localCommandsConfig: LocalCommandsConfig, logger: Logger) {
+internal suspend fun runBot(
+	token: BotToken,
+	localCommandsConfig: LocalCommandsConfig,
+	outState: (BotStateReference) -> Unit,
+	logger: Logger,
+) {
 	coroutineScope {
+		val stateReference: BotStateReference =
+			LoggingBotStateReference(
+				reference = JavaAtomicBotStateReference(initialState = BotState.Resumed),
+				logger = logger,
+			)
+		CoroutineScopedBotStateReference(coroutineScope = this, stateReference)
+			.let { scopedStateReference: BotStateReference ->
+				launch { outState(scopedStateReference) }
+			}
+
 		val deferredMainEventListenerConfig: CompletableDeferred<MainEventListener.Config> = CompletableDeferred()
 
 		val jda: Jda =
 			startJda(
 				token = token,
 				deferredMainEventListenerConfig = deferredMainEventListenerConfig,
+				loadState = stateReference::load,
 				logger = logger,
 			)
 
@@ -45,6 +66,7 @@ internal suspend fun runBot(token: BotToken, localCommandsConfig: LocalCommandsC
 private fun CoroutineScope.startJda(
 	token: BotToken,
 	deferredMainEventListenerConfig: CompletableDeferred<MainEventListener.Config>,
+	loadState: () -> BotState,
 	logger: Logger,
 ): Jda {
 	val localCommandExecutor = LocalCommandExecutor(logger)
@@ -60,6 +82,7 @@ private fun CoroutineScope.startJda(
 		MainEventListener(
 			parentCoroutineScope = this,
 			deferredConfig = deferredMainEventListenerConfig,
+			loadState = loadState,
 			localCommandExecutor = localCommandExecutor,
 			uiStringResolver = UiStringResolver.English,
 			logger = logger,
