@@ -6,10 +6,10 @@ jda = "net.dv8tion:JDA:5.6.1"
 
 slf4jApi = "org.slf4j:slf4j-api:2.0.17"
 
-junit-bom = "org.junit:junit-bom:5.13.1"
+junit-bom = "org.junit:junit-bom:5.13.2"
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
 junit-platformLauncher = { module = "org.junit.platform:junit-platform-launcher" }
 
 [plugins]
-kotlinJvm = "org.jetbrains.kotlin.jvm:2.1.21"
-shadow = "com.gradleup.shadow:9.0.0-beta16"
+kotlinJvm = "org.jetbrains.kotlin.jvm:2.2.0"
+shadow = "com.gradleup.shadow:9.0.0-beta17"
