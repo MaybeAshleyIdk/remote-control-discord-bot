@@ -1,0 +1,59 @@
+$ remote-control-discord-bot --help
+usage: remote-control-discord-bot [--instance=<name>] <command> [<argument>]
+    A Discord bot that allows local commands to be executed through the Discord client using slash commands.
+
+    The bot token is read out from the file "$XDG_CONFIG_HOME/remote-control-discord-bot/<instance_name>/token.txt".
+
+    Commands:
+      start   Start the bot.
+      stop    Shut down the bot.
+
+      status  Check if the bot is running.
+
+      pause   Pause the bot with an optional reason.
+      resume  Resume the bot.
+
+    Options:
+      -I, --instance=<name>  Set the instance name. (default: "default")
+
+$ remote-control-discord-bot start --help
+usage: remote-control-discord-bot [--instance=<name>] start
+    Start the bot.
+
+$ remote-control-discord-bot pause --help
+usage: remote-control-discord-bot [--instance=<name>] pause [<reason>]
+    Pause the bot with an optional reason.
+
+$ remote-control-discord-bot stop --help
+usage: remote-control-discord-bot [--instance=<name>] stop [--no-wait]
+    Shuts down the bot.
+
+    Options:
+      -w, --wait     Wait until the bot has shut down. (default)
+      -W, --no-wait  Only send the shutdown request and do not wait until the bot has actually shut down.
+
+$ remote-control-discord-bot --instance=foo start
+...
+
+
+$ remote-control-discord-bot --instance=foo resume
+The bot was not paused. Nothing changed.
+
+$ remote-control-discord-bot --instance=foo pause "for some reason"
+The bot was paused with reason "for some reason".
+
+$ remote-control-discord-bot --instance=foo pause
+The bot pause reason was removed.
+
+$ remote-control-discord-bot --instance=foo resume
+The bot was resumed.
+
+$ remote-control-discord-bot --instance=foo status
+The bot is active.
+
+$ remote-control-discord-bot --instance=foo stop
+Shutting down...
+The bot was successfully shut down.
+
+$ remote-control-discord-bot --instance=foo status
+The bot is not running.
