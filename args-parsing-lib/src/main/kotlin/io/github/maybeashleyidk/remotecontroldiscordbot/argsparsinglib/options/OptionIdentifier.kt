@@ -1,0 +1,3 @@
+package io.github.maybeashleyidk.remotecontroldiscordbot.argsparsinglib.options
+
+public sealed interface OptionIdentifier

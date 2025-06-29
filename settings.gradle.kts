@@ -15,6 +15,8 @@ dependencyResolutionManagement {
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
+include(":args-parsing-lib")
+
 include(
 	":logging:api",
 	":logging:impl-stderr",

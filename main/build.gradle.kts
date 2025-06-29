@@ -30,6 +30,7 @@ dependencies {
 		exclude(module = "opus-java")
 	}
 
+	implementation(projects.argsParsingLib)
 	implementation(projects.localCommands)
 	implementation(projects.bot)
 	implementation(projects.logging.implStderr)
