@@ -34,6 +34,10 @@ internal class CoroutineScopedBotStateReference(
 		return this.activeReference.compareAndSet(expectedState, newState)
 	}
 
+	override fun exchange(newState: BotState): BotState {
+		return this.activeReference.exchange(newState)
+	}
+
 	private val activeReference: BotStateReference
 		get() {
 			val activeData: ActiveData = this.activeData ?: throwCancellationException()

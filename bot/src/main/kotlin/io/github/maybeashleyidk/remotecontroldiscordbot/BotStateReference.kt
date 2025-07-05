@@ -10,4 +10,6 @@ public interface BotStateReference {
 	public fun load(): BotState
 
 	public fun compareAndSet(expectedState: BotState, newState: BotState): Boolean
+
+	public fun exchange(newState: BotState): BotState
 }

@@ -15,4 +15,8 @@ internal class JavaAtomicBotStateReference(initialState: BotState) : BotStateRef
 	override fun compareAndSet(expectedState: BotState, newState: BotState): Boolean {
 		return this.atomicReference.compareAndSet(expectedState, newState)
 	}
+
+	override fun exchange(newState: BotState): BotState {
+		return this.atomicReference.getAndSet(newState)
+	}
 }

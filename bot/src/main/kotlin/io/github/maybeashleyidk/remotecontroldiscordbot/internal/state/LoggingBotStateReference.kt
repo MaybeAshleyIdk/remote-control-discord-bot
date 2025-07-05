@@ -24,6 +24,14 @@ internal class LoggingBotStateReference(
 		return success
 	}
 
+	override fun exchange(newState: BotState): BotState {
+		val oldState: BotState = this.reference.exchange(newState)
+
+		this.logNewState(oldState, newState)
+
+		return oldState
+	}
+
 	private fun logNewState(oldState: BotState, newState: BotState) {
 		val message: String = createLoggingMessage(oldState, newState)
 
