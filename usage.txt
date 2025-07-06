@@ -25,12 +25,8 @@ usage: remote-control-discord-bot [--instance=<name>] pause [<reason>]
     Pause the bot with an optional reason.
 
 $ remote-control-discord-bot stop --help
-usage: remote-control-discord-bot [--instance=<name>] stop [--no-wait]
+usage: remote-control-discord-bot [--instance=<name>] stop
     Shuts down the bot.
-
-    Options:
-      -w, --wait     Wait until the bot has shut down. (default)
-      -W, --no-wait  Only send the shutdown request and do not wait until the bot has actually shut down.
 
 $ remote-control-discord-bot --instance=foo start
 ...
