@@ -21,6 +21,14 @@ include(
 	":logging:api",
 	":logging:impl-stderr",
 	":logging:slf4j",
+)
+
+include(
+	":socket-ipc:api",
+	":socket-ipc:impl",
+)
+
+include(
 	":local-commands",
 	":bot",
 	":main",

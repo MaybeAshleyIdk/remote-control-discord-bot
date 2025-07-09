@@ -1,0 +1,87 @@
+This file describes the internal inter-process communication protocol via a UNIX domain socket.
+This is NOT a public, stable API! It may change between releases in a backward compatible manner!
+
+
+===================================================== DEFINITIONS ======================================================
+
+
+MAGIC_NUMBER ::= {
+	(i) The UUID was generated using uuidgen(1) (<https://www.man7.org/linux/man-pages/man1/uuidgen.1.html>)
+
+	byte representation of the UUID 5448b67d-31fd-4778-a9e0-4579c66ce8be
+}
+
+OptionalBotPauseReason ::= {
+	(i) If size is 0, then the pause reason is empty/null.
+
+	size ::= int32
+
+	bytes of UTF-8 encoded string ::= byte[size]
+}
+
+BotStateResumed ::= [0x1]
+BotStatePaused ::= [0x2, OptionalBotPauseReason]
+BotState ::= BotStateResumed | BotStatePaused
+
+
+======================================================= REQUESTS =======================================================
+
+
+state {
+	(i) Gets the current state of the bot.
+
+	CLIENT                    SERVER
+	  |                          |
+	  |   [MAGIC_NUMBER, 0x10]   |
+	  | -----------------------> |
+	  |                          |
+	  |        [BotState]        |
+	  | <----------------------- |
+	  |                          |
+	CLIENT                    SERVER
+}
+
+pause {
+	(i) Pauses the bot with an optional reason.
+	(i) The server responds with the state before it was changed to paused.
+
+	CLIENT                                            SERVER
+	  |                                                  |
+	  |   [MAGIC_NUMBER, 0x20, OptionalBotPauseReason]   |
+	  | -----------------------------------------------> |
+	  |                                                  |
+	  |                    [BotState]                    |
+	  | <----------------------------------------------- |
+	  |                                                  |
+	CLIENT                                            SERVER
+}
+
+resume {
+	(i) Resumes the bot.
+	(i) The server responds with the state before it was changed to resumed.
+
+	CLIENT                    SERVER
+	  |                          |
+	  |   [MAGIC_NUMBER, 0x28]   |
+	  | -----------------------> |
+	  |                          |
+	  |        [BotState]        |
+	  | <----------------------- |
+	  |                          |
+	CLIENT                    SERVER
+}
+
+shutdown {
+	(i) Shuts the bot down.
+	(i) The server with simply the byte 0x1 after the bot has successfully shut down.
+
+	CLIENT                    SERVER
+	  |                          |
+	  |   [MAGIC_NUMBER, 0x28]   |
+	  | -----------------------> |
+	  |                          |
+	  |           [0x1]          |
+	  | <----------------------- |
+	  |                          |
+	CLIENT                    SERVER
+}
