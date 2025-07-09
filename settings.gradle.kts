@@ -15,6 +15,8 @@ dependencyResolutionManagement {
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
+include(":serialization")
+
 include(
 	":logging:api",
 	":logging:impl-stderr",
