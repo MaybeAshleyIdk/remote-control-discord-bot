@@ -100,5 +100,9 @@ private fun handleProgramArgumentParsingFailure(
 private fun main(processInformation: ProcessInformation, arguments: ProgramArguments) {
 	val instanceName: InstanceName = arguments.instanceName ?: InstanceName.DEFAULT
 
-	mainBot(processInformation, instanceName)
+	if (arguments.isBot) {
+		mainBot(processInformation, instanceName)
+	} else {
+		mainIpcClient(processInformation, instanceName)
+	}
 }

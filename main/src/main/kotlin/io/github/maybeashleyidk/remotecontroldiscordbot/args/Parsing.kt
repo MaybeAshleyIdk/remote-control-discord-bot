@@ -6,8 +6,18 @@ import kotlinx.collections.immutable.ImmutableList
 
 internal fun parseProgramArguments(arguments: ImmutableList<String>): Result {
 	return when (arguments.size) {
-		0 -> Result.Success(arguments = ProgramArguments(instanceName = null))
+		0 -> Result.Success(arguments = ProgramArguments(instanceName = null, isBot = true))
 		1 -> parseSingleArgument(argument = arguments[0])
+		2 -> {
+			val r = parseSingleArgument(argument = arguments[0])
+			if (r is Result.Success) {
+				check(arguments[1] == "ipc")
+				r.copy(arguments = r.arguments.copy(isBot = false))
+			} else {
+				r
+			}
+		}
+
 		else -> Result.ExcessiveArguments(count = arguments.size - 1)
 	}
 }
@@ -29,6 +39,6 @@ private fun parseSingleArgument(argument: String): Result {
 	val instanceName: InstanceName = InstanceName.ofString(instanceNameString)
 		?: return Result.InvalidInstanceName(instanceNameString)
 
-	val arguments = ProgramArguments(instanceName)
+	val arguments = ProgramArguments(instanceName, isBot = true)
 	return Result.Success(arguments)
 }

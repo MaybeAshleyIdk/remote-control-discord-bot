@@ -4,4 +4,5 @@ import io.github.maybeashleyidk.remotecontroldiscordbot.InstanceName
 
 internal data class ProgramArguments(
 	val instanceName: InstanceName?,
+	val isBot: Boolean,
 )

@@ -26,6 +26,8 @@ import java.nio.channels.SocketChannel
 
 internal class SocketIpcServerImpl(private val channel: ServerSocketChannel) : SocketIpcServer {
 
+	// TODO: log if a request is dropped and why
+
 	private enum class SinglyTryResult {
 		Handled,
 		Invalid,

@@ -11,12 +11,15 @@ internal enum class ExitStatus(val code: Int) {
 	NonExistingFile(24),
 	HomeEnvironmentVariableUnsetOrEmpty(48),
 	HomeEnvironmentVariableNotAbsolute(49),
-	LocalCommandsConfigInvalidLine(50),
-	LocalCommandsConfigInvalidCommandName(51),
-	LocalCommandsConfigEmptyCommandLine(52),
-	LocalCommandsConfigDuplicateCommand(53),
-	LocalCommandsConfigZeroCommandsDefined(54),
-	InvalidToken(55),
+	XdgRuntimeDirEnvironmentVariableUnsetOrEmpty(50),
+	XdgRuntimeDirEnvironmentVariableNotAbsolute(51),
+	LocalCommandsConfigInvalidLine(52),
+	LocalCommandsConfigInvalidCommandName(53),
+	LocalCommandsConfigEmptyCommandLine(54),
+	LocalCommandsConfigDuplicateCommand(55),
+	LocalCommandsConfigZeroCommandsDefined(56),
+	InvalidToken(57),
+	IpcSocketAlreadyExists(58),
 }
 
 internal fun exitProcess(status: ExitStatus): Nothing {
